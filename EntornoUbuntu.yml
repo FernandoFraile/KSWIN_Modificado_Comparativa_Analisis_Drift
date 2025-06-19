@@ -1,4 +1,4 @@
-name: EntornoUbuntu
+name: EntornoTFG
 channels:
   - defaults
   - conda-forge

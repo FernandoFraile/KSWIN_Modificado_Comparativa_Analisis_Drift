@@ -25,3 +25,13 @@ Una vez instalado Miniconda, se debe crear un entorno virtual utilizando el arch
 ```bash
 conda env create -f EntornoWindows.yml
 
+- **En Ubuntu/Linux** (ejecutar en la terminal del sistema):
+
+```bash
+conda env create -f EntornoUbuntu.yml
+
+### 3. Activación del entorno
+
+```bash
+
+conda activate EntornoTFG

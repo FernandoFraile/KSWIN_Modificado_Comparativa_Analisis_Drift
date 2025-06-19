@@ -1,4 +1,4 @@
-name: EntornoWindows
+name: EntornoTFG
 channels:
   - defaults
   - conda-forge

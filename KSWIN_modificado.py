@@ -189,55 +189,46 @@ class KSWIN_modificado(KSWIN):
            - En caso contrario, se asume un drift "incremental".
         """
 
-        # Verificación del tipo de métrica proporcionada
         if not isinstance(self._metric, metrics.base.Metric):
             raise ValueError("Se necesita un objeto base.Metric para identificar el tipo de drift")
 
-        # Establecer semilla para reproducibilidad
         np.random.seed(123)
+        x = np.linspace(0, len(confirm_window[0:(self.window_size-self.stat_size)]), len(confirm_window[0:(self.window_size-self.stat_size)]))
+        y = np.array(confirm_window[0:(self.window_size-self.stat_size)])
 
-        # Preparar datos para estimación no paramétrica
-        x = np.linspace(0, len(confirm_window[0:self.window_size // 2]), len(confirm_window[0:self.window_size // 2]))
-        y = np.array(confirm_window[0:self.window_size // 2])
+        
+        kr = KernelReg(y, x, var_type='c')  # 'c' indica que x es continua
+        y_pred, dy_dx = kr.fit(x)  # Obtiene la estimación de y y su derivada
 
-        # Ajuste de regresión kernel: estimación de tendencia y derivada local
-        kr = KernelReg(y, x, var_type='c')  # 'c' = variable continua
-        y_pred, dy_dx = kr.fit(x)
-
-        # Caso 1: pendiente creciente → drift gradual
         if any(dy_dx > 0):
             self._tipo_drift = "gradual"
 
-        # Caso 2: sin evidencia de pendiente → evaluar entre abrupto o incremental
-        else:
-            self.valores_en_drift = []
+        else: 
 
-            # Simulación de evolución métrica ante caída de rendimiento tras drift abrupto
-            for i in range(1, self.stat_size):
-                valor = np.random.choice([0, 1], p=[0.6, 0.4])  # 60% de acierto, 40% error
-                if valor == 0:
-                    self._metric.update(1, 1)  # correcto
+            for i in range(1, self.stat_size): 
+                valor = np.random.choice([0,1], p=[0.6, 0.4])
+                if valor == 0: 
+                    self._metric.update(1,1)
                 else:
-                    self._metric.update(1, 0)  # error
+                    self._metric.update(1,0)
+            
                 self.valores_en_drift.append(self._metric.get())
-
-            # Suavizado exponencial de los valores simulados
+    
             accuracies = pd.Series(self.valores_en_drift)
             smoothed_accuracies = accuracies.ewm(span=self.stat_size, adjust=False).mean()
 
-            # Comparación estadística: KS test entre ventana real y simulada
-            st, p_valor = stats.ks_2samp(
-                confirm_window[self.stat_size:(self.stat_size * 2)],
-                smoothed_accuracies.to_list()[-self.stat_size:],
-                method="auto",
-                alternative="greater"
-            )
+            # Ahora se hace un test KS para ver si la funcion suavizada teorica de abrupto es igual a la función suavizada real
 
-            # Si p-valor indica diferencia significativa → drift abrupto
-            if p_valor < 0.05:
-                self._tipo_drift = "abrupt"
-            else:
+            st, p_valor = stats.ks_2samp(confirm_window[self.stat_size:(self.stat_size*2)], smoothed_accuracies.to_list()[-self.stat_size:], method="auto", alternative="greater")
+
+            if p_valor < 0.05: 
+                self._tipo_drift = "abrupto"
+            else: 
                 self._tipo_drift = "incremental"
+
+      
+
+
 
 
 
